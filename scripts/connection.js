@@ -1,46 +1,41 @@
-const peerShortIdInput = document.getElementById('peerShortId');
-const connectButton = document.getElementById('connectButton');
 const sendButton = document.getElementById('sendButton');
 const statusDisplay = document.getElementById('status');
 const receivedDataDisplay = document.getElementById('receivedData');
+const linkToShare = document.getElementById('linkToShare');
+const shareUrlInput = document.getElementById('shareUrl');
+const peerIdInput = document.getElementById('peerId');
+const connectButton = document.getElementById('connectButton');
 
 let peer;
 let connection;
-let shortIdMapping = {};  // In-memory mapping for short IDs to full PeerJS IDs
-
-// Function to generate a 4-digit short ID
-function generateShortId() {
-    return Math.floor(1000 + Math.random() * 9000);  // Generates a number between 1000 and 9999
-}
 
 // Create a new Peer instance
 peer = new Peer();  // PeerJS will generate a random ID for you
 
-// Once the peer is connected to the PeerJS server, display the short ID
+// Once the peer is connected to the PeerJS server, display the link
 peer.on('open', (id) => {
-    const shortId = generateShortId();
-    shortIdMapping[shortId] = id;  // Store the short ID to long ID mapping
-    statusDisplay.textContent = 'Your short peer ID: ' + shortId;
+    const currentUrl = window.location.href.split('?')[0];  // Base URL without any query params
+    const shareUrl = `${currentUrl}?peerId=${id}`;
+    linkToShare.style.display = 'block';
+    shareUrlInput.value = shareUrl;  // Display the URL to share
+    statusDisplay.textContent = 'Your peer ID: ' + id + ' (Share the URL)';
 });
 
-// Handle incoming connections
-peer.on('connection', (conn) => {
-    connection = conn;
+// Extract the peerId from the URL if available
+const urlParams = new URLSearchParams(window.location.search);
+const peerIdFromUrl = urlParams.get('peerId');
+
+if (peerIdFromUrl) {
+    // If peerId is present in URL, automatically connect
+    connection = peer.connect(peerIdFromUrl);
     setupConnectionHandlers(connection);
-    statusDisplay.textContent = 'Connected to peer: ' + conn.peer;
-});
+}
 
-// When clicking "Connect", use the short ID to establish connection with another peer
+// When clicking "Connect", establish connection with another peer
 connectButton.addEventListener('click', () => {
-    const shortId = peerShortIdInput.value;
-    const peerId = shortIdMapping[shortId];  // Look up the full PeerJS ID
-
-    if (peerId) {
-        connection = peer.connect(peerId);
-        setupConnectionHandlers(connection);
-    } else {
-        alert('No peer found with this short ID.');
-    }
+    const peerId = peerIdInput.value;
+    connection = peer.connect(peerId);
+    setupConnectionHandlers(connection);
 });
 
 // Send a random number when "Send Random Number" is clicked
@@ -67,3 +62,10 @@ function setupConnectionHandlers(conn) {
         sendButton.disabled = true;
     });
 }
+
+// Handle incoming connections
+peer.on('connection', (conn) => {
+    connection = conn;
+    setupConnectionHandlers(connection);
+    statusDisplay.textContent = 'Connected to peer: ' + conn.peer;
+});
