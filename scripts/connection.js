@@ -12,7 +12,7 @@ let shortIdMapping = {};  // In-memory mapping for short IDs to full PeerJS IDs
 function generateShortId() {
     return Math.floor(1000 + Math.random() * 9000);  // Generates a number between 1000 and 9999
 }
-n
+
 // Create a new Peer instance
 peer = new Peer();  // PeerJS will generate a random ID for you
 
