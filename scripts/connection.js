@@ -3,8 +3,6 @@ const statusDisplay = document.getElementById('status');
 const receivedDataDisplay = document.getElementById('receivedData');
 const linkToShare = document.getElementById('linkToShare');
 const shareUrlInput = document.getElementById('shareUrl');
-const peerIdInput = document.getElementById('peerId');
-const connectButton = document.getElementById('connectButton');
 
 let peer;
 let connection;
@@ -30,13 +28,6 @@ if (peerIdFromUrl) {
     connection = peer.connect(peerIdFromUrl);
     setupConnectionHandlers(connection);
 }
-
-// When clicking "Connect", establish connection with another peer
-connectButton.addEventListener('click', () => {
-    const peerId = peerIdInput.value;
-    connection = peer.connect(peerId);
-    setupConnectionHandlers(connection);
-});
 
 // Send a random number when "Send Random Number" is clicked
 sendButton.addEventListener('click', () => {
