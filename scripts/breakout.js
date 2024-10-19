@@ -154,6 +154,9 @@ window.onload = function() {
         if (peerData) {
             peerScore.textContent = 'Their Score: ' + peerData.score;
             peerHighScore.textContent = 'Their High Score: ' + peerData.highScore;
+        } else {
+            peerScore.textContent = '';
+            peerHighScore.textContent = '';
         }
     }
 
