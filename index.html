@@ -1,10 +1,11 @@
 <!DOCTYPE html>
 <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
-<script src="scripts/breakout.js" defer></script>
-<script src="scripts/connection.js" defer></script>
+<script type="module" src="scripts/breakout.js" defer></script>
+<script type="module" src="scripts/connection.js" defer></script>
 <style>
     body {
         background: #2F2219;
+        color: #CCA27A;
     }
     * {
         padding: 0;
@@ -13,10 +14,15 @@
     canvas {
         background: #CCA27A;
         display: block;
-        margin: 0 auto;
+        margin: auto auto auto auto;
+    }
+    input {
+        background: #2F2219;
+        color: #CCA27A;
     }
     button {
-        display: block;
+        background: #CCA27A;
+        color: #2F2219;
     }
 </style>
 <html lang="en">
@@ -24,6 +30,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Breakout</title>
+    <input type="text" id="myData" hidden>
+    <input type="text" id="peerData" hidden>
 </head>
 <body>
     <div id="linkToShare" style="display:none;">
@@ -31,9 +39,14 @@
         <input type="text" id="shareUrl" readonly style="width:100%;">
     </div>
 
-    <button id="sendButton" disabled>Send Random Number</button>
+    <button id="sendButton" hidden></button>
     <div id="status">Status: Not connected</div>
-    <div id="receivedData"></div>
+    <div id="myId"></div>
+    <div id="peerId"></div>
     <canvas id="myCanvas" width="480" height="320"></canvas>
+    <div id="highScore">High Score: 0</div>
+    <div id="score">Score: 0</div>
+    <div id="peerHighScore">Their High Score: 0</div>
+    <div id="peerScore">Their Score: 0</div>
 </body>
 </html>

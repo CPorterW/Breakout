@@ -1,10 +1,14 @@
 window.onload = function() {
     const canvas = document.getElementById("myCanvas");
+    const sendButton = document.getElementById("sendButton");
+    const myHighScore = document.getElementById('highScore');
+    const myScore = document.getElementById('score');
+    const peerHighScore = document.getElementById('peerHighScore');
+    const peerScore = document.getElementById('peerScore');
 
     // Every other measurement is based off of this.
     // 70% of viewport width.
-    canvas.width = .7 * window.innerWidth;
-
+    canvas.width = .6 * window.innerWidth;
     canvas.height = canvas.width * 2/3;
     const ctx = canvas.getContext("2d");
     let x = canvas.width / 2;
@@ -22,10 +26,17 @@ window.onload = function() {
     let brickNumPerRow = 6;
     let brickColNum = 3;
     let gameOverSeconds = 5;
-    for (i=0;i<brickNumPerRow*brickColNum;i++) {
-        bricks[i] = {x:0,y:0,hasBeenHit:false}
-    }
+    let score = 0;
+    let highScore = 0;
     let interval = 0;
+    let myData;
+    let peerData;
+
+    function generateBrickField() {
+        for (var i=0;i<brickNumPerRow*brickColNum;i++) {
+            bricks[i] = {x:0,y:0,hasBeenHit:false}
+        }
+    }
 
     function drawBricks() {
         let gapsBetweenBricks = brickNumPerRow + 1;
@@ -33,7 +44,10 @@ window.onload = function() {
         let brickHeight = canvas.width/48 * 2;
         let brickX = canvas.width / 48;
         let brickY = canvas.width/48;
-        for (i=0; i<brickNumPerRow*brickColNum; i++) {
+        let totalBricks = brickNumPerRow * brickColNum
+        let bricksNotCleared = totalBricks;
+        for (var i=0; i<totalBricks; i++) {
+
             bricks[i].brickX = brickX;
             bricks[i].brickY = brickY;
             if (i%brickNumPerRow == 0 && i != 0) {
@@ -47,6 +61,12 @@ window.onload = function() {
                 ctx.fill();
                 ctx.closePath();
                 [x, y, dx, dy] = whetherBallDirectionShouldSwitch(x, y, dx, dy, brickX, brickX + brickWidth, brickY, brickY + brickHeight, i);
+            } else {
+                bricksNotCleared -= 1;
+                if (bricksNotCleared == 0) {
+                    brickNumPerRow += 1;
+                    generateBrickField();
+                }
             }
             brickX += brickWidth + canvas.width/48;
         }
@@ -115,13 +135,56 @@ window.onload = function() {
 
             if (brickId != -1) {
                 bricks[brickId].hasBeenHit = true;
+                score += 1;
+                highScore = highScore < score ? score : highScore
             }
         }
 
         return [x, y, dx, dy];
     }
 
+    window.addEventListener('peerDataReceived', function(event) {
+        peerData = event.detail;
+        updateScoreDisplays();
+    });
+
+    function updateScoreDisplays() {
+        myHighScore.textContent = 'High Score: ' + highScore;
+        myScore.textContent = 'Score: ' + score;
+        if (peerData) {
+            peerScore.textContent = 'Their Score: ' + peerData.score;
+            peerHighScore.textContent = 'Their High Score: ' + peerData.highScore;
+        }
+    }
+
+    function dataTransfer() {
+        // This is the info that I gets sent to your friend's computer.
+        // Right now only the score is used, but I plan to make use of 
+        // all of it.
+        myData = {
+            canvasWidth: canvas.width,
+            x: x,
+            y: y,
+            speed: speed,
+            dx: dx,
+            dy: dy,
+            paddleX: paddleX,
+            paddleY: paddleY,
+            bricks: bricks,
+            brickNumPerRow: brickNumPerRow,
+            brickColNum: brickColNum,
+            score: score,
+            highScore: highScore
+        }
+
+        localStorage.setItem(document.getElementById('myId').value, JSON.stringify(myData));
+        sendButton.click();
+        myHighScore.textContent = 'High Score: ' + highScore;
+        myScore.textContent = 'Score: ' + score;
+    }
+
     function draw() {
+        dataTransfer();
 
         // Resets the canvas before drawing everything
         ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -154,23 +217,29 @@ window.onload = function() {
         y += dy;
         
         if(isGameOver()) {
-            clearInterval(interval);
-            let gameOverFontSize = canvas.width * .1;
-            ctx.font = gameOverFontSize + "px Arial";
-            ctx.fillStyle = "red";
-            let gameOverText = "Game Over";
-            let textWidth = ctx.measureText(gameOverText).width;
-            let textX = (canvas.width - textWidth) / 2;
-            let textY = canvas.height / 2;
-            ctx.fillText(gameOverText, textX, textY);
-            
-            // Thanks to https://www.sitepoint.com/delay-sleep-pause-wait/
-            function sleep(ms) {
-                return new Promise(resolve => setTimeout(resolve, ms));
-            }
-
-            sleep(2000).then(() => { startGame() });
+            gameOver();
         }
+    }
+
+    function gameOver() {
+        clearInterval(interval);
+        let gameOverFontSize = canvas.width * .1;
+        ctx.font = gameOverFontSize + "px Arial";
+        ctx.fillStyle = "red";
+        let gameOverText = "Game Over";
+        let textWidth = ctx.measureText(gameOverText).width;
+        let textX = (canvas.width - textWidth) / 2;
+        let textY = canvas.height / 2;
+        ctx.fillText(gameOverText, textX, textY);
+        
+        score = 0;
+
+        sleep(2000).then(() => { startGame() });
+    }
+
+    // Thanks to https://www.sitepoint.com/delay-sleep-pause-wait/
+    function sleep(ms) {
+        return new Promise(resolve => setTimeout(resolve, ms));
     }
 
     function isGameOver() {
@@ -195,9 +264,8 @@ window.onload = function() {
 
     function startGame() {
         interval = setInterval(draw, 10);
-        for (i=0;i<brickNumPerRow*brickColNum;i++) {
-            bricks[i] = {x:0,y:0,hasBeenHit:false}
-        }
+        generateBrickField();
+        brickNumPerRow = 6;
         x = canvas.width / 2;
         y = canvas.height * 27/32;
         dx = canvas.width / 240;
