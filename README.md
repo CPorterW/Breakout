@@ -1,20 +1,46 @@
 # Overview
 
-I made a simple breakout game using canvas and ctx. I want to expand this project by adding upgrades, a new look and breaking animations. I used a tutorial cited below to get started, but you will see that I did not use the same code as is in the tutorial. I made my game expandable, adaptable, and dynamic. For instance, the ball can bounce off the sides and top of the bricks, which feature took 8 hours to perfect. The paddle responds to the mouse instead of the keyboard, and the canvas and shapes grow and shrink based on viewport width. The variables are all designed to be independently, easily upgraded or adjusted as I add new features to the game.
+This is a simple breakout game which I intend to expand. See READMEOLD.md for more info on that. To play the game, move your mouse across the screen. The paddle will follow your mouse and deflect the ball at the bricks, increasing your score. Try to beat my high score of 52! 
 
-I wanted to learn how to make graphics in Javascript, so that I could make the web games that I grew up on. I want to evolve this project into something I'm proud to share with my friends, that they might play it all the way through and enjoy every minute of it. I want to take the things I've learned from this project and take a shot at other videogame cliches like tower defense and platformers.
+To play multiplayer, send the url to a friend. Be careful not to leave or refresh the page when you do – as of now, this will change your ID in the system and the link you must share will change. Once your friend has clicked on the link, they will begin playing breakout too, and your scores will be shared. 
 
-I've provided a walkthrough below. This is my first time making such a video so bear with me :)
+I made this game so I could learn networking; not the charismatic business major sort, the nerdy computer major networking. I wanted to prove to myself that I could make a game that works, that you can share with your friends and enjoy together. This program still has a long way to go before it's worth publishing, but I'm proud of what I've accomplished in the four weeks I've fiddled with it so far.
 
-[Breakout Demo Video](https://www.youtube.com/watch?v=V7efu6fKGa4)
+{Provide a link to your YouTube demonstration.  It should be a 4-5 minute demo of the software running (you will need to show two pieces of software running and communicating with each other) and a walkthrough of the code.}
+
+[Breakout Networking Demo](https://www.youtube.com/watch?v=0KluSCEwVWA)
+
+# Network Communication
+
+I used a peer-to-peer connection via PeerJS.
+
+I'm currently using a protocol similar to TCP.
+
+The messages are transfered in the form of JSON stringified objects and parsed on the receiving end.
 
 # Development Environment
 
-* Visual Studio Code
-* JavaScript, HTML and CSS
-* Git / GitHub
+- Visual Studio Code
+- JavaScript, HTML and CSS
+- Git / GitHub
+- PeerJS
+- localStorage
 
 # Useful Websites
+
+## Sites Used During the Networking Phase
+
+- [PeerJS, Docs](https://peerjs.com/docs/#start)
+
+- [Tutorials Point, How can I make a browser to browser (peer to peer) connection in HTML?](https://www.tutorialspoint.com/How-can-I-make-a-browser-to-browser-peer-to-peer-connection-in-HTML)
+
+- [MDN Web Docs](https://developer.mozilla.org/en-US/docs/Web/API/Window/localStorage)
+
+- [w3 Schools, Window localStorage](https://www.w3schools.com/jsref/prop_win_localstorage.asp)
+
+- [doFactory, HTML <button> hidden Attribute](dofactory.com/html/button/hidden)
+
+## Sites Used During the Basic Game Development Phase
 
 - [MDN Web Docs, Breakout Tutorial](https://developer.mozilla.org/en-US/docs/Games/Tutorials/2D_Breakout_game_pure_JavaScript/Create_the_Canvas_and_draw_on_it)
 - [MDN Web Docs, Math.random](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Math/random)
@@ -27,8 +53,11 @@ I've provided a walkthrough below. This is my first time making such a video so 
 - [GeeksForGeeks, JS Mouse Coordinates](https://www.geeksforgeeks.org/javascript-coordinates-of-mouse/)
 
 # Future Work
-- Use HTML and CSS to improve the look of the page
-- Add cash and upgrades
-- Add breaking animations
-- Allow user customization of brick and backgroud graphics
-- Add a points system for bragging purposes
+
+* Turn the game into breakout/pong/airhockey by adding a UDP connection, drawing an upside-down canvas with your opponent's game above your own, and allowing the balls to cross into each other's screen.
+
+* Restart the scoring and later, the cash and upgrades for the duration of the connection, restoring or adding to old stats on connection close. 
+
+* Permify stats using localStorage, save IDs so that connections can be recovered.
+
+* See READMEOLD.md for basic breakout game improvements

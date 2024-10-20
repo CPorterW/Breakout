@@ -16,7 +16,6 @@ window.onload = function() {
     let speed = canvas.width / 240;
     let dx = canvas.width / 240;
     let dy = canvas.height / -160;
-    let velocity = [dx, dy];
     let ballRadius = canvas.width / 48;
     let paddleWidth = ballRadius * 5;
     let paddleHeight = ballRadius;
@@ -143,11 +142,14 @@ window.onload = function() {
         return [x, y, dx, dy];
     }
 
+    // Right now, this correlates to line 81 of connection.js. 
+    // I've never made window events before so I think this is pretty cool.
     window.addEventListener('peerDataReceived', function(event) {
         peerData = event.detail;
         updateScoreDisplays();
     });
 
+    
     function updateScoreDisplays() {
         myHighScore.textContent = 'High Score: ' + highScore;
         myScore.textContent = 'Score: ' + score;
@@ -155,6 +157,7 @@ window.onload = function() {
             peerScore.textContent = 'Their Score: ' + peerData.score;
             peerHighScore.textContent = 'Their High Score: ' + peerData.highScore;
         } else {
+            // If no connection, this basically hides the element.
             peerScore.textContent = '';
             peerHighScore.textContent = '';
         }
@@ -180,10 +183,12 @@ window.onload = function() {
             highScore: highScore
         }
 
+        // Adding a window listener is more efficient, but I've never used localStorage 
+        // before and I figured I'd give it a shot. This is also my first time explicitly
+        // using JSON.
         localStorage.setItem(document.getElementById('myId').value, JSON.stringify(myData));
         sendButton.click();
-        myHighScore.textContent = 'High Score: ' + highScore;
-        myScore.textContent = 'Score: ' + score;
+        updateScoreDisplays();
     }
 
     function draw() {
@@ -237,7 +242,7 @@ window.onload = function() {
         
         score = 0;
 
-        sleep(2000).then(() => { startGame() });
+        sleep(gameOverSeconds*1000).then(() => { startGame() });
     }
 
     // Thanks to https://www.sitepoint.com/delay-sleep-pause-wait/

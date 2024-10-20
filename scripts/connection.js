@@ -10,10 +10,10 @@ const peerId = document.getElementById('peerId');
 let myself;
 let connection;
 
-// Create a new Peer instance with configuration
 function initializePeer() {
     myself = new Peer();
 
+    // When the connection to PeerJS opens, this happens.
     myself.on('open', (id) => {
         document.getElementById('myId').value = id;
         const currentUrl = window.location.href.split('?')[0];
@@ -23,9 +23,8 @@ function initializePeer() {
     });
 
 
-    // Handle incoming connections
+    // When PeerJS facilitates a connection to another peer, this happens.
     myself.on('connection', (conn) => {
-        console.log('Incoming connection from:', conn.peer);
         connection = conn;
         setupConnectionHandlers(connection);
         linkToShare.setAttribute('hidden', 'hidden');
@@ -39,21 +38,29 @@ initializePeer();
 const urlParams = new URLSearchParams(window.location.search);
 const peerIdFromUrl = urlParams.get('peerId');
 
+// Only if the peerId is present in the url, the site will immediately try to connect.
 if (peerIdFromUrl) {
     setTimeout(connectToPeer, 2000);
 } else {
+    // If the peerId isn't present, then the shareable url will show.
     linkToShare.style.display = 'block';
 }
 
 function connectToPeer() {
+    // Only if the connection to PeerJS has been properly opened will connections with peers
+    // be attempted.
     if (myself && myself.id) {
         connection = myself.connect(peerIdFromUrl, {
             reliable: true,
+            
+            // This serialization makes parsing unnecessary.
             serialization: 'json'
         });
+        
         setupConnectionHandlers(connection);
     } else {
-        console.log('Peer not ready, retrying in 2 seconds...');
+        // Without this, connectToPeer would run many times a second
+        // and error out the code.
         setTimeout(connectToPeer, 2000);
     }
 }
@@ -76,10 +83,11 @@ function setupConnectionHandlers(conn) {
     });
 
     conn.on('data', (data) => {
+        // This is sent through localStorage and I haven't learned
+        // serialization yet, so here we are.
         data = JSON.parse(data);
-        localStorage.removeItem(conn.peer);
-        localStorage.setItem(conn.peer, JSON.stringify(data));
 
+        // This creates an event that can be used by breakout.js.
         window.dispatchEvent(new CustomEvent('peerDataReceived', { detail: data }));
     });
 
@@ -88,7 +96,6 @@ function setupConnectionHandlers(conn) {
     });
 
     conn.on('error', (error) => {
-        console.error('Connection error:', error);
         statusDisplay.textContent = 'Connection error: ' + error;
         // Attempt to reconnect
         if (peerIdFromUrl) {
