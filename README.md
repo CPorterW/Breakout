@@ -6,8 +6,6 @@ To play multiplayer, send the url to a friend. Be careful not to leave or refres
 
 I made this game so I could learn networking; not the charismatic business major sort, the nerdy computer major networking. I wanted to prove to myself that I could make a game that works, that you can share with your friends and enjoy together. This program still has a long way to go before it's worth publishing, but I'm proud of what I've accomplished in the four weeks I've fiddled with it so far.
 
-{Provide a link to your YouTube demonstration.  It should be a 4-5 minute demo of the software running (you will need to show two pieces of software running and communicating with each other) and a walkthrough of the code.}
-
 [Breakout Networking Demo](https://www.youtube.com/watch?v=0KluSCEwVWA)
 
 # Network Communication
