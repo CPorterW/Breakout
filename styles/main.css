@@ -1,0 +1,21 @@
+body {
+    background: #2F2219;
+    color: #CCA27A;
+}
+* {
+    padding: 0;
+    margin: 0;
+}
+canvas {
+    background: #CCA27A;
+    display: block;
+    margin: auto auto auto auto;
+}
+input {
+    background: #2F2219;
+    color: #CCA27A;
+}
+button {
+    background: #CCA27A;
+    color: #2F2219;
+}

@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
+<script type="module" src="scripts/breakout2.js" defer></script>
+<script type="module" src="scripts/connection.js" defer></script>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="styles/main.css">
+    <title>Breakout</title>
+    <input type="text" id="myData" hidden>
+    <input type="text" id="peerData" hidden>
+</head>
+<body>
+    <div id="linkToShare" style="display:none;">
+        <p>Share this URL with your friend:</p>
+        <input type="text" id="shareUrl" readonly style="width:100%;">
+    </div>
+
+    <button id="sendButton" hidden></button>
+    <div id="status">Status: Not connected</div>
+    <div id="myId"></div>
+    <div id="peerId"></div>
+    <canvas id="myCanvas" width="480" height="320"></canvas>
+    <div id="highScore">High Score: 0</div>
+    <div id="score">Score: 0</div>
+    <div id="peerHighScore"></div>
+    <div id="peerScore"></div>
+</body>
+</html>
