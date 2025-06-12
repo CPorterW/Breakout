@@ -80,6 +80,16 @@ class Player {
     constructor(name, lives) {
         this.lives = lives;
         this.name = name;
+        this.heartScales = Array(lives).fill(1); // Track individual heart scales
+    }
+
+    updateHeartPulse() {
+        // Update heart scales for a subtle pulse effect
+        this.heartScales = this.heartScales.map((scale, index) => {
+            if (scale >= 1.2) return 1;
+            if (scale <= 1) return 1.1;
+            return scale + 0.002; // Adjust pulse speed
+        });
     }
 }
 
@@ -93,7 +103,7 @@ const peerScore = document.getElementById('peerScore');
 window.onload = function() {
 
     // Every other measurement is based off of this.
-    // 70% of viewport width.
+    // 80% of viewport height.
     const canvasSize = .8
 
     // Canvas Variables
@@ -114,8 +124,8 @@ window.onload = function() {
     let ball1 = new Ball(
         canvas.width / 2,           // x
         canvas.height * 11/32,      // y - will position this in the lower half
-        canvas.width / 240,         // dx
-        canvas.height / -320,       // dy
+        canvas.width / 240,         // dx - lateral direction
+        canvas.height / -320,       // dy - vertical direction
         ballSpeed,                  // speed
         ballRadius                  // radius
     );
@@ -136,19 +146,19 @@ window.onload = function() {
     
     // Create paddles
     let paddle1 = new Paddle(
-        (canvas.width - paddleWidth) / 2,  // x
-        canvas.height * 30/32 - paddleHeight, // y
-        paddleSpeed,                       // speed
-        paddleWidth,                       // width
-        paddleHeight                       // height
+        (canvas.width - paddleWidth) / 2,       // x
+        canvas.height * 30/32 - paddleHeight,   // y
+        paddleSpeed,                            // speed
+        paddleWidth,                            // width
+        paddleHeight                            // height
     );
     
     let paddle2 = new Paddle(
-        (canvas.width - paddleWidth) / 2,  // x
-        canvas.height * 2/32, // y
-        paddleSpeed,                       // speed
-        paddleWidth,                       // width
-        paddleHeight                       // height
+        (canvas.width - paddleWidth) / 2,       // x
+        canvas.height * 2/32,                   // y
+        paddleSpeed,                            // speed
+        paddleWidth,                            // width
+        paddleHeight                            // height
     );
     
     // Brick Variables
@@ -174,12 +184,28 @@ window.onload = function() {
         ArrowRight: false
     };
 
+    // Heart constants
+    const heartMatrix = [
+        [0,0,1,1,0,0,1,1,0,0],
+        [0,1,1,1,1,1,1,1,1,0],
+        [1,1,1,1,1,1,1,1,1,1],
+        [1,1,1,1,1,1,1,1,1,1],
+        [0,1,1,1,1,1,1,1,1,0],
+        [0,0,1,1,1,1,1,1,0,0],
+        [0,0,0,1,1,1,1,0,0,0],
+        [0,0,0,0,1,1,0,0,0,0],
+    ];
+
+    const pixelSize = 2;
+
     document.addEventListener('keydown', function(event) {
         switch(event.key) {
             case 'ArrowLeft':
+                event.preventDefault(); // Prevents the page from scrolling
                 keys.ArrowLeft = true;
                 break;
             case 'ArrowRight':
+                event.preventDefault();
                 keys.ArrowRight = true;
                 break;
             case 'a':
@@ -391,6 +417,10 @@ window.onload = function() {
         paddle1.draw(ctx);
         paddle2.draw(ctx);
         drawBricks();
+
+        // Draw lives
+        drawPlayerLives(player1, false);
+        drawPlayerLives(player2, true);
         
         // Handle collisions and movement
         handleBallLogic(ball1);
@@ -425,12 +455,17 @@ window.onload = function() {
         // Check if either ball has gone out of bounds
         if (ball1.y > canvas.height - ball1.radius || ball2.y > canvas.height - ball2.radius) {
             player1.lives -= 1;
+            if (player1.heartScales.length > player1.lives) {
+                player1.heartScales.pop(); // Remove a heart
+            }
         }
         if (ball1.y < ball1.radius || ball2.y < ball2.radius) {
             player2.lives -= 1;
+            if (player2.heartScales.length > player2.lives) {
+                player2.heartScales.pop(); // Remove a heart
+            }
         }
-        return (ball1.y > canvas.height - ball1.radius || ball1.y < ball1.radius) ||
-               (ball2.y > canvas.height - ball2.radius || ball2.y < ball2.radius);
+        return player1.lives <= 0 || player2.lives <= 0;
     }
     
     function gameOver() {
@@ -443,6 +478,10 @@ window.onload = function() {
         paddle1.draw(ctx);
         paddle2.draw(ctx);
         drawBricks();
+        
+        // Draw lives
+        drawPlayerLives(player1, false);
+        drawPlayerLives(player2, true);
         
         // Cancel any existing animation frame to stop the game loop
         if (animationFrameId) {
@@ -499,11 +538,48 @@ window.onload = function() {
         return new Promise(resolve => setTimeout(resolve, ms));
     }
 
+    function drawHeart(x, y, scale, color = '#FF3B3B') {
+        for (let row = 0; row < heartMatrix.length; row++) {
+            for (let col = 0; col < heartMatrix[row].length; col++) {
+                if (heartMatrix[row][col]) {
+                    ctx.fillStyle = color;
+                    ctx.fillRect(
+                        x + col * pixelSize * scale,
+                        y + row * pixelSize * scale,
+                        pixelSize * scale,
+                        pixelSize * scale
+                    );
+                }
+            }
+        }
+    }
+
+    function drawPlayerLives(player, isTopPlayer) {
+        const heartSpacing = pixelSize * 12; // Space between hearts
+        const startY = isTopPlayer ? 10 : canvas.height - (pixelSize * 10);
+        const startX = canvas.width / 2 - (player.lives * heartSpacing) / 2;
+
+        player.updateHeartPulse(); // Update heart pulse scales
+
+        player.heartScales.forEach((scale, index) => {
+            const heartX = startX + index * heartSpacing;
+            if (index < player.lives) {
+                drawHeart(heartX, startY, scale);
+            }
+        });
+    }
+
+
+
     function startGame() {
         // Reset game state
         stage = 5;
         generateBrickField();
         brickNumPerRow = 6;
+        
+        // Reset players
+        player1 = new Player('Player 1', 10);
+        player2 = new Player('Player 2', 10);
         
         // Reset ball positions and velocities
         ball1.x = canvas.width / 2;
