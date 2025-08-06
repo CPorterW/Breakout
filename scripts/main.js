@@ -14,9 +14,11 @@ window.onload = function() {
     let titleX = (canvas.width - titleWidth) / 2;
     let titleY = canvas.height * 0.42;
     ctx.fillText(titleText, titleX, titleY);
+
+
     let title2FontSize = titleFontSize * .5;
     ctx.font = "bold " + title2FontSize + "px Arial Black";
-    let title2Text = "Book of Mormon";
+    let title2Text = "War Chapters";
     let title2Width = ctx.measureText(title2Text).width;
     let title2X = (canvas.width - title2Width) / 2;
     let title2Y = canvas.height * 0.2;
@@ -97,7 +99,7 @@ window.onload = function() {
             clickY <= twoPlayerButton.y + twoPlayerButton.height) {
             console.log("Two Player mode selected");
             
-            window.location.href = "twoPlayer.html";
+            window.location.href = "twoPlayerCharacterSelect.html";
         }
     });
 };

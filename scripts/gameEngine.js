@@ -48,8 +48,11 @@ export class GameEngine {
     }
     
     initializePlayers() {
-        this.player1 = new Player('Player 1', 10);
-        this.player2 = new Player('Player 2', 10);
+        let params = new URLSearchParams(window.location.search);
+        let player1Character = params.get("p1");
+        let player2Character = params.get("p2");
+        this.player1 = new Player('Player 1', 10, player1Character);
+        this.player2 = new Player('Player 2', 10, player2Character);
     }
     
     initializeBalls() {

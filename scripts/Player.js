@@ -1,8 +1,9 @@
 // Player.js
 export class Player {
-    constructor(name, lives) {
+    constructor(name, lives, character) {
         this.lives = lives;
         this.name = name;
+        this.character = character;
         this.heartScales = Array(lives).fill(1); // Track individual heart scales
     }
 
