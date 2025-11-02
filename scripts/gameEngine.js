@@ -4,8 +4,9 @@ import { Paddle } from './Paddle.js';
 import { Player } from './Player.js';
 import { checkCollision } from './collisionSystem.js';
 import { generateBrickField, drawBricks } from './brickSystem.js';
-import { drawPlayerLives, updateScoreDisplays } from './uiSystem.js';
+import { drawPlayerLives, updateScoreDisplays, drawCharacters } from './uiSystem.js';
 import { keys } from './inputSystem.js';
+import { Character } from "./Characters.js";
 
 export class GameEngine {
     constructor(canvas) {
@@ -51,8 +52,10 @@ export class GameEngine {
         let params = new URLSearchParams(window.location.search);
         let player1Character = params.get("p1");
         let player2Character = params.get("p2");
-        this.player1 = new Player('Player 1', 10, player1Character);
-        this.player2 = new Player('Player 2', 10, player2Character);
+        let p1Char = Character.buildCharacterByName(player1Character, false);
+        let p2Char = Character.buildCharacterByName(player2Character, true);
+        this.player1 = new Player('Player 1', 10, p1Char);
+        this.player2 = new Player('Player 2', 10, p2Char);
     }
     
     initializeBalls() {
@@ -189,6 +192,9 @@ export class GameEngine {
         // Draw lives
         drawPlayerLives(this.ctx, this.canvas, this.player1, false);
         drawPlayerLives(this.ctx, this.canvas, this.player2, true);
+
+        // Draw character sprites
+        drawCharacters(this.ctx, this.canvas, this.player1.character, this.player2.character, delta);
         
         // Handle collisions and movement
         this.handleBallLogic(this.ball1);
@@ -316,10 +322,16 @@ export class GameEngine {
         this.bricks = generateBrickField(this.brickNumPerRow, this.brickColNum);
         this.brickNumPerRow = 6;
         
-        // Reset players
-        this.player1 = new Player('Player 1', 10);
-        this.player2 = new Player('Player 2', 10);
+        // Reset players        
+        let params = new URLSearchParams(window.location.search);
+        let player1Character = params.get("p1");
+        let player2Character = params.get("p2");
         
+        let p1Char = Character.buildCharacterByName(player1Character, false);
+        let p2Char = Character.buildCharacterByName(player2Character, true);
+        this.player1 = new Player('Player 1', 10, p1Char);
+        this.player2 = new Player('Player 2', 10, p2Char);
+
         // Reset ball positions and velocities
         this.ball1.x = this.canvas.width / 2;
         this.ball1.y = this.canvas.height / 2 + this.canvas.height * 11/32;

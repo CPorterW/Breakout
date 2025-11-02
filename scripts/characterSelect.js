@@ -1,3 +1,5 @@
+import { Character } from "./Characters.js";
+
 const canvas = document.getElementById("myCanvas");
 const canvasSize = 0.8;
 canvas.height = window.innerHeight * canvasSize;
@@ -24,181 +26,25 @@ let mouse = { x: 0, y: 0, hoveringIndex: -1 };
 let selector1 = { index: 0 }; // WASD keys control this
 let selector2 = { index: 1 }; // Arrow keys control this
 
-class Characters {
-    constructor(name, rows, columns, frameRate, reverse = false, totalFrames = 0, frameWidth = 32, frameHeight = 32) {
-        this.name = name;
-        this.imagePath = "images/" + name + ".png";
-        this.reverseImagePath = "images/" + name + "Reversed.png";
-        this.rows = rows;
-        this.columns = columns;
-        this.frameRate = frameRate;
-        this.totalFrames = totalFrames || rows * columns;
-        this.frameWidth = frameWidth;
-        this.frameHeight = frameHeight;
-
-        this.image = new Image();
-        this.image.src = reverse ? this.reverseImagePath : this.imagePath;
-
-        // Animator internal state
-        this.currentFrame = 0;
-        this.elapsedTime = 0;
-
-        // Bounding box cache
-        this.boundingBoxes = [];
-        this.boundingBoxesCalculated = false;
-    }
-
-    // Calculate bounding boxes for all frames and find maximum dimensions
-    calculateBoundingBoxes() {
-        if (this.boundingBoxesCalculated) return;
-
-        const tempCanvas = document.createElement('canvas');
-        tempCanvas.width = this.frameWidth;
-        tempCanvas.height = this.frameHeight;
-        const tempCtx = tempCanvas.getContext('2d');
-
-        // Disable image smoothing for crisp pixel art
-        tempCtx.imageSmoothingEnabled = false;
-
-        let maxWidth = 0;
-        let maxHeight = 0;
-
-        for (let frame = 0; frame < this.totalFrames; frame++) {
-            const frameX = frame % this.columns;
-            const frameY = Math.floor(frame / this.columns);
-
-            // Clear and draw the current frame
-            tempCtx.clearRect(0, 0, this.frameWidth, this.frameHeight);
-            tempCtx.drawImage(
-                this.image,
-                frameX * this.frameWidth,
-                frameY * this.frameHeight,
-                this.frameWidth,
-                this.frameHeight,
-                0,
-                0,
-                this.frameWidth,
-                this.frameHeight
-            );
-
-            // Get image data and find bounding box
-            const imageData = tempCtx.getImageData(0, 0, this.frameWidth, this.frameHeight);
-            const data = imageData.data;
-
-            let minX = this.frameWidth;
-            let minY = this.frameHeight;
-            let maxX = 0;
-            let maxY = 0;
-
-            // Scan for opaque pixels
-            for (let y = 0; y < this.frameHeight; y++) {
-                for (let x = 0; x < this.frameWidth; x++) {
-                    const index = (y * this.frameWidth + x) * 4;
-                    const alpha = data[index + 3];
-
-                    if (alpha > 0) { // If pixel is not fully transparent
-                        minX = Math.min(minX, x);
-                        minY = Math.min(minY, y);
-                        maxX = Math.max(maxX, x);
-                        maxY = Math.max(maxY, y);
-                    }
-                }
-            }
-
-            // Store bounding box (handle case where no opaque pixels found)
-            if (minX <= maxX && minY <= maxY) {
-                const width = maxX - minX + 1;
-                const height = maxY - minY + 1;
-                this.boundingBoxes[frame] = {
-                    x: minX,
-                    y: minY,
-                    width: width,
-                    height: height
-                };
-                // Track maximum dimensions across all frames
-                maxWidth = Math.max(maxWidth, width);
-                maxHeight = Math.max(maxHeight, height);
-            } else {
-                // Fallback to full frame if no opaque pixels found
-                this.boundingBoxes[frame] = {
-                    x: 0,
-                    y: 0,
-                    width: this.frameWidth,
-                    height: this.frameHeight
-                };
-                maxWidth = Math.max(maxWidth, this.frameWidth);
-                maxHeight = Math.max(maxHeight, this.frameHeight);
-            }
-        }
-
-        // Store maximum dimensions for consistent scaling
-        this.maxBoundingWidth = maxWidth;
-        this.maxBoundingHeight = maxHeight;
-        this.boundingBoxesCalculated = true;
-    }
-
-    update(deltaTime) {
-        this.elapsedTime += deltaTime;
-        if (this.elapsedTime > 1000 / this.frameRate) {
-            this.currentFrame = (this.currentFrame + 1) % this.totalFrames;
-            this.elapsedTime = 0;
-        }
-    }
-
-    draw(ctx, x, y, targetHeight) {
-        // Calculate bounding boxes if not done yet
-        if (!this.boundingBoxesCalculated) {
-            this.calculateBoundingBoxes();
-        }
-
-        const frameX = this.currentFrame % this.columns;
-        const frameY = Math.floor(this.currentFrame / this.columns);
-
-        // Scale based on the maximum bounding box height for consistent sizing
-        const scale = targetHeight / this.maxBoundingHeight;
-
-        // Always draw the full frame, but scale it consistently
-        // Use the bottom of the frame as the anchor point
-        const scaledFrameWidth = this.frameWidth * scale;
-        const scaledFrameHeight = this.frameHeight * scale;
-
-        // Position so the bottom of the frame aligns with the y parameter
-        const drawX = x - scaledFrameWidth / 2; // Center horizontally
-        const drawY = y - scaledFrameHeight;    // Anchor to bottom
-
-        ctx.drawImage(
-            this.image,
-            frameX * this.frameWidth,           // Source x (full frame)
-            frameY * this.frameHeight,          // Source y (full frame)
-            this.frameWidth,                    // Source width (full frame)
-            this.frameHeight,                   // Source height (full frame)
-            drawX,                              // Destination x
-            drawY,                              // Destination y
-            scaledFrameWidth,                   // Destination width (scaled)
-            scaledFrameHeight                   // Destination height (scaled)
-        );
-    }
-}
-
 const characterList = [
-    new Characters("Nephi", 4, 3, 10, false, 11),
-    new Characters("Moroni", 3, 3, 12),
-    new Characters("Teancum", 4, 3, 18),
-    new Characters("Amalackiah", 5, 5, 12)
+    new Character("Nephi", 4, 3, 10, false, 11),
+    new Character("Moroni", 3, 3, 12),
+    new Character("Teancum", 4, 3, 18),
+    new Character("Amalackiah", 5, 5, 12)
 ];
 
 const reverseCharacterList = [
-    new Characters("Nephi", 4, 3, 10, true, 11),
-    new Characters("Moroni", 3, 3, 12, true),
-    new Characters("Teancum", 4, 3, 18, true),
-    new Characters("Amalackiah", 5, 5, 12, true)
+    new Character("Nephi", 4, 3, 10, true, 11),
+    new Character("Moroni", 3, 3, 12, true),
+    new Character("Teancum", 4, 3, 18, true),
+    new Character("Amalackiah", 5, 5, 12, true)
 ];
 
 const characterBrickList = [
-    new Characters("NephiBrick", 4, 3, 10, false, 10),
-    new Characters("MoroniBrick", 3, 3, 12),
-    new Characters("TeancumBrick", 4, 3, 18),
-    new Characters("AmalackiahBrick", 5, 5, 12)
+    new Character("NephiBrick", 4, 3, 10, false, 10),
+    new Character("MoroniBrick", 3, 3, 12),
+    new Character("TeancumBrick", 4, 3, 18),
+    new Character("AmalackiahBrick", 5, 5, 12)
 ];
 
 const characterDescriptions = {
@@ -330,7 +176,7 @@ function gameLoop(timestamp) {
     // Draw Player 1's character
     if (selector2.index < reverseCharacterList.length) {
         reverseCharacterList[selector2.index].update(deltaTime);
-        reverseCharacterList[selector2.index].draw(ctx, canvas.width / 6, canvas.height / 1, canvas.height / 4, true);
+        reverseCharacterList[selector2.index].draw(ctx, canvas.width / 6, canvas.height / 1, canvas.height / 4);
 
         // Draw character description
         const charDescriptions = characterDescriptions[reverseCharacterList[selector2.index].name];

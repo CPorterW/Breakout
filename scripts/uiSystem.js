@@ -1,3 +1,4 @@
+import { Character } from "./Characters.js";
 // uiSystem.js
 export const heartMatrix = [
     [0,0,1,1,0,0,1,1,0,0],
@@ -59,4 +60,16 @@ export function updateScoreDisplays(score, highScore, peerData) {
         peerScore.textContent = '';
         peerHighScore.textContent = '';
     }
+}
+
+export function drawCharacters(ctx, canvas, p1Char, p2Char, deltaTime) {
+    if (p1Char) {
+        p1Char.draw(ctx, canvas.width / 1.2, 1 + canvas.height / 2 - 8.5 * canvas.width / 48, canvas.height / 4);
+        p1Char.update(deltaTime)
+    }
+    if (p2Char) {
+        p2Char.draw(ctx, canvas.width / 6, canvas.height / 1, canvas.height / 4, true);
+        p2Char.update(deltaTime);
+    }
+
 }
