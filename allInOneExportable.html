@@ -1,0 +1,838 @@
+
+    <style>
+        body {
+            background: #2F2219;
+            color: #CCA27A;
+        }
+
+        * {
+            padding: 0;
+            margin: 0;
+        }
+
+        canvas {
+            background: #CCA27A;
+            display: block;
+            margin: auto auto auto auto;
+        }
+
+        input {
+            background: #2F2219;
+            color: #CCA27A;
+        }
+
+        button {
+            background: #CCA27A;
+            color: #2F2219;
+        }
+    </style>
+    <script type="text/javascript">
+        var canvas = document.getElementById("myCanvas");
+
+        window.onload = function () {
+            // Initialize input system
+            initializeInputSystem();
+
+            // Create and start the game
+            canvas = document.getElementById("myCanvas");
+            const game = new GameEngine(canvas);
+            game.startGame();
+        };
+        function generateBrickField(brickNumPerRow, brickColNum) {
+            const bricks = [];
+            for (var i = 0; i < brickNumPerRow * brickColNum; i++) {
+                bricks[i] = { x: 0, y: 0, hasBeenHit: false };
+            }
+            return bricks;
+        }
+        function drawBricks(ctx, canvas, bricks, brickNumPerRow, brickColNum, ball1, ball2, resetCallback) {
+            let gapsBetweenBricks = brickNumPerRow + 1;
+            let mortar = canvas.width / 48; // The mortar is the distance between bricks, equal to half the size of a brick.
+
+            let brickWidth = mortar * (48 - gapsBetweenBricks) / brickNumPerRow;
+            let brickHeight = mortar * 2;
+
+            // brickLengths are the height of a brick plus the mortar, so total height can be measured.
+            let brickLength = brickHeight + mortar;
+
+            let brickX = mortar;
+            let brickY = canvas.height / 2 - (brickLength * brickColNum / 2) + mortar / 2; // Half the mortar is added to center the bricks vertically.
+            let totalBricks = brickNumPerRow * brickColNum;
+            let bricksNotCleared = totalBricks;
+
+            for (var i = 0; i < totalBricks; i++) {
+                bricks[i].brickX = brickX;
+                bricks[i].brickY = brickY;
+
+                if (i % brickNumPerRow == 0 && i != 0) {
+                    brickY += brickHeight + mortar;
+                    brickX = mortar;
+                }
+
+                if (!bricks[i].hasBeenHit) {
+                    ctx.beginPath();
+                    ctx.rect(brickX, brickY, brickWidth, brickHeight);
+                    ctx.fillStyle = "#2F2219";
+                    ctx.fill();
+                    ctx.closePath();
+
+                    // Check collision for both balls
+                    checkBrickCollision(ball1, brickX, brickX + brickWidth, brickY, brickY + brickHeight, i, bricks);
+                    checkBrickCollision(ball2, brickX, brickX + brickWidth, brickY, brickY + brickHeight, i, bricks);
+                } else {
+                    bricksNotCleared -= 1;
+                    if (bricksNotCleared == 0) {
+                        resetCallback(); // Reset with more bricks
+                    }
+                }
+
+                brickX += brickWidth + mortar;
+            }
+        }
+        function checkCollision(ball, objLeftX, objRightX, objTopY, objBottomY) {
+            // Expand the object's boundaries by the ball's radius
+            const leftBound = objLeftX - ball.radius;
+            const rightBound = objRightX + ball.radius;
+            const topBound = objTopY - ball.radius;
+            const bottomBound = objBottomY + ball.radius;
+
+            // Check if the ball's center is within the expanded boundaries
+            if (ball.x > leftBound && ball.x < rightBound && ball.y > topBound && ball.y < bottomBound) {
+                // Calculate the intersection depths
+                const overlapLeft = ball.x - leftBound;
+                const overlapRight = rightBound - ball.x;
+                const overlapTop = ball.y - topBound;
+                const overlapBottom = bottomBound - ball.y;
+
+                // Using overlap was the best way I could think of,
+                // because I couldn't figure out how to get solid edges.
+                // This finds the edge nearest to an edge of the ball.
+                // Or rather, it finds the nearest edge's distance from
+                // the edge of the ball.
+                const minOverlap = Math.min(overlapLeft, overlapRight, overlapTop, overlapBottom);
+
+                // Figures out which side was hit and adjusts position and velocity 
+                // Position needs to be adjusted because there used to be a weird
+                // glitch where the ball would get stuck inside the paddle
+                if (minOverlap === overlapLeft) {
+                    ball.x = leftBound;
+                    ball.dx = -Math.abs(ball.dx);
+                } else if (minOverlap === overlapRight) {
+                    ball.x = rightBound;
+                    ball.dx = Math.abs(ball.dx);
+                } else if (minOverlap === overlapTop) {
+                    ball.y = topBound;
+                    ball.dy = -Math.abs(ball.dy);
+                } else if (minOverlap === overlapBottom) {
+                    ball.y = bottomBound;
+                    ball.dy = Math.abs(ball.dy);
+                }
+
+                ball.setSpeed();
+                return true;
+            }
+            return false;
+        }
+        function checkBrickCollision(ball, objLeftX, objRightX, objTopY, objBottomY, brickId, bricks,) {
+            if (checkCollision(ball, objLeftX, objRightX, objTopY, objBottomY)) {
+                bricks[brickId].hasBeenHit = true;
+                return true;
+            }
+            return false;
+        }
+        const heartMatrix = [
+            [0, 0, 1, 1, 0, 0, 1, 1, 0, 0],
+            [0, 1, 1, 1, 1, 1, 1, 1, 1, 0],
+            [1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+            [1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+            [0, 1, 1, 1, 1, 1, 1, 1, 1, 0],
+            [0, 0, 1, 1, 1, 1, 1, 1, 0, 0],
+            [0, 0, 0, 1, 1, 1, 1, 0, 0, 0],
+            [0, 0, 0, 0, 1, 1, 0, 0, 0, 0],
+        ];
+
+        const pixelSize = 2;
+        function drawHeart(ctx, x, y, scale, color = '#FF3B3B') {
+            for (let row = 0; row < heartMatrix.length; row++) {
+                for (let col = 0; col < heartMatrix[row].length; col++) {
+                    if (heartMatrix[row][col]) {
+                        ctx.fillStyle = color;
+                        ctx.fillRect(
+                            x + col * pixelSize * scale,
+                            y + row * pixelSize * scale,
+                            pixelSize * scale,
+                            pixelSize * scale
+                        );
+                    }
+                }
+            }
+        }
+        function drawPlayerLives(ctx, canvas, player, isTopPlayer) {
+            const heartSpacing = pixelSize * 12; // Space between hearts
+            const startY = isTopPlayer ? 10 : canvas.height - (pixelSize * 10);
+            const startX = canvas.width / 2 - (player.lives * heartSpacing) / 2;
+
+            player.updateHeartPulse(); // Update heart pulse scales
+
+            player.heartScales.forEach((scale, index) => {
+                const heartX = startX + index * heartSpacing;
+                if (index < player.lives) {
+                    drawHeart(ctx, heartX, startY, scale);
+                }
+            });
+        }
+        const keys = {
+            a: false,
+            d: false,
+            ArrowLeft: false,
+            ArrowRight: false
+        };
+        function initializeInputSystem() {
+            document.addEventListener('keydown', function (event) {
+                switch (event.key) {
+                    case 'ArrowLeft':
+                        event.preventDefault(); // Prevents the page from scrolling
+                        keys.ArrowLeft = true;
+                        break;
+                    case 'ArrowRight':
+                        event.preventDefault();
+                        keys.ArrowRight = true;
+                        break;
+                    case 'a':
+                        keys.a = true;
+                        break;
+                    case 'd':
+                        keys.d = true;
+                        break;
+                }
+            });
+
+            document.addEventListener('keyup', function (event) {
+                switch (event.key) {
+                    case 'ArrowLeft':
+                        keys.ArrowLeft = false;
+                        break;
+                    case 'ArrowRight':
+                        keys.ArrowRight = false;
+                        break;
+                    case 'a':
+                        keys.a = false;
+                        break;
+                    case 'd':
+                        keys.d = false;
+                        break;
+                }
+            });
+        }
+        class Paddle {
+            constructor(x, y, speed, width, height) {
+                this.x = x;
+                this.y = y;
+                this.speed = speed;
+                this.width = width;
+                this.height = height;
+            }
+
+            draw(ctx) {
+                ctx.beginPath();
+                ctx.rect(this.x, this.y, this.width, this.height);
+                ctx.fillStyle = "#2F2219";
+                ctx.fill();
+                ctx.closePath();
+            }
+
+            moveLeft() {
+                this.x -= this.speed;
+            }
+
+            moveRight() {
+                this.x += this.speed;
+            }
+
+            constrainToBounds(canvasWidth) {
+                this.x = Math.max(0, Math.min(canvasWidth - this.width, this.x));
+            }
+        }
+        class Ball {
+            constructor(x, y, dx, dy, speed, radius, canvasHeight) {
+                const canvasMiddle = canvasHeight / 2;
+                this.x = x;
+                this.y = y + canvasMiddle; // Adjust y position relative to canvas middle
+                this.dx = dx;
+                this.dy = dy;
+                this.speed = speed;
+                this.radius = radius;
+            }
+
+            draw(ctx) {
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+                ctx.fillStyle = "#2F2219";
+                ctx.fill();
+                ctx.closePath();
+            }
+
+            move() {
+                this.x += this.dx;
+                this.y += this.dy;
+            }
+
+            setSpeed() {
+                // Makes the bounces a little bit random
+                this.dx += (Math.random() - .5) * this.speed / 8;
+                this.dy += (Math.random() - .5) * this.speed / 8;
+
+                /* 
+                I'm in love with these formulas! They keep the speeds within 
+                reasonable bounds, and ensure that the ball doesn't bounce so 
+                horizontally that it takes forever to fall. 
+                */
+                this.dx = Math.sign(this.dx) * Math.abs(this.dx / this.dy * (this.speed));
+                this.dy = Math.sign(this.dy) * Math.abs(this.dy / this.dx * (this.speed));
+
+                if (Math.abs(this.dx) < this.speed / 1.3) {
+                    this.dx = Math.sign(this.dx) * this.speed;
+                    this.dy = Math.sign(this.dy) * this.speed;
+                }
+                if (Math.abs(this.dy) < this.speed / 1.3) {
+                    this.dx = Math.sign(this.dx) * this.speed;
+                    this.dy = Math.sign(this.dy) * this.speed;
+                }
+            }
+        }
+
+        class GameEngine {
+            constructor(canvas) {
+                this.canvas = canvas;
+                this.ctx = canvas.getContext("2d");
+
+                // Canvas setup
+                const canvasSize = 0.8;
+                this.canvas.height = window.innerHeight * canvasSize;
+                this.canvas.width = this.canvas.height * 3 / 4;
+
+                // Game variables
+                this.ballSpeed = this.canvas.width / 120;
+                this.ballRadius = this.canvas.width / 48;
+                this.paddleSpeed = this.ballSpeed * 2;
+                this.paddleWidth = this.ballRadius * 5;
+                this.paddleHeight = this.ballRadius;
+
+                // Game state
+                this.stage = 5;
+                this.lastTime = 0;
+                this.animationFrameId = null;
+                this.brickNumPerRow = 6;
+                this.brickColNum = 6;
+                this.bricks = [];
+
+                this.init();
+            }
+
+            init() {
+                this.initializePlayers();
+                this.initializeBalls();
+                this.initializePaddles();
+                this.initializeBricks();
+            }
+
+            initializePlayers() {
+                this.player1 = new Player('Player 1', 10);
+                this.player2 = new Player('Player 2', 10);
+            }
+
+            initializeBalls() {
+                this.ball1 = new Ball(
+                    this.canvas.width / 2,           // x
+                    this.canvas.height * 11 / 32,      // y - will position this in the lower half
+                    this.canvas.width / 240,         // dx - lateral direction
+                    this.canvas.height / -320,       // dy - vertical direction
+                    this.ballSpeed,                  // speed
+                    this.ballRadius,                 // radius
+                    this.canvas.height
+                );
+
+                this.ball2 = new Ball(
+                    this.canvas.width / 2,           // x
+                    -this.canvas.height * 11 / 32,     // y - negative to position in upper half
+                    this.canvas.width / 240,         // dx
+                    this.canvas.height / 320,        // dy - note this is positive for the second ball
+                    this.ballSpeed,                  // speed
+                    this.ballRadius,                 // radius
+                    this.canvas.height
+                );
+            }
+
+            initializePaddles() {
+                this.paddle1 = new Paddle(
+                    (this.canvas.width - this.paddleWidth) / 2,       // x
+                    this.canvas.height * 30 / 32 - this.paddleHeight,   // y
+                    this.paddleSpeed,                                  // speed
+                    this.paddleWidth,                                  // width
+                    this.paddleHeight                                  // height
+                );
+
+                this.paddle2 = new Paddle(
+                    (this.canvas.width - this.paddleWidth) / 2,       // x
+                    this.canvas.height * 2 / 32,                         // y
+                    this.paddleSpeed,                                  // speed
+                    this.paddleWidth,                                  // width
+                    this.paddleHeight                                  // height
+                );
+            }
+
+            initializeBricks() {
+                this.bricks = generateBrickField(this.brickNumPerRow, this.brickColNum);
+            }
+
+            resetBricks() {
+                this.brickNumPerRow += 1;
+                this.bricks = generateBrickField(this.brickNumPerRow, this.brickColNum);
+            }
+            draw(timestamp) {
+                // Calculate delta time for smooth animation
+                const delta = this.lastTime === 0 ? 0 : (timestamp - this.lastTime) / 1000; // convert from ms to seconds
+                this.lastTime = timestamp;
+
+                // Update speeds based on delta time
+                const currentSpeed = this.canvas.width / 2.7 * (delta || 1 / 60); // fallback to 60fps if delta is 0
+                this.ball1.speed = currentSpeed;
+                this.ball2.speed = currentSpeed;
+                this.paddle1.speed = currentSpeed * 2;
+                this.paddle2.speed = currentSpeed * 2;
+
+                // Clear the canvas before drawing everything
+                this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+
+                // Handle paddle movement
+                if (keys.ArrowLeft) this.paddle1.moveLeft();
+                if (keys.ArrowRight) this.paddle1.moveRight();
+                if (keys.a) this.paddle2.moveLeft();
+                if (keys.d) this.paddle2.moveRight();
+
+                // Ensure paddles stay within the canvas
+                this.paddle1.constrainToBounds(this.canvas.width);
+                this.paddle2.constrainToBounds(this.canvas.width);
+
+                // Draw game elements
+                this.ball1.draw(this.ctx);
+                this.ball2.draw(this.ctx);
+                this.paddle1.draw(this.ctx);
+                this.paddle2.draw(this.ctx);
+                drawBricks(
+                    this.ctx,
+                    this.canvas,
+                    this.bricks,
+                    this.brickNumPerRow,
+                    this.brickColNum,
+                    this.ball1,
+                    this.ball2,
+                    () => this.resetBricks()
+                );
+
+                // Draw lives
+                drawPlayerLives(this.ctx, this.canvas, this.player1, false);
+                drawPlayerLives(this.ctx, this.canvas, this.player2, true);
+
+                // Handle collisions and movement
+                this.handleBallLogic(this.ball1);
+                this.handleBallLogic(this.ball2);
+
+                // Check for game over
+                if (this.isGameOver()) {
+                    this.gameOver();
+                }
+                else {
+                    // Store the ID so we can cancel it if needed
+                    this.animationFrameId = requestAnimationFrame((timestamp) => this.draw(timestamp));
+                }
+            }
+
+            handleBallLogic(ball) {
+                checkCollision(ball, -100, 10000, this.canvas.height, 10000);
+                checkCollision(ball, -100, 10000, -100, 0);
+                checkCollision(ball, -100, 0, -100, 10000);
+                checkCollision(ball, this.canvas.width, 10000, -100, 10000);
+
+                // Paddle collision check
+                checkCollision(ball, this.paddle1.x, this.paddle1.x + this.paddle1.width, this.paddle1.y, this.paddle1.y + this.paddle1.height);
+                checkCollision(ball, this.paddle2.x, this.paddle2.x + this.paddle2.width, this.paddle2.y, this.paddle2.y + this.paddle2.height);
+
+                // Move ball
+                ball.move();
+            }
+
+            isGameOver() {
+                // Check if either ball has gone out of bounds
+                if (this.ball1.y > this.canvas.height - this.ball1.radius || this.ball2.y > this.canvas.height - this.ball2.radius) {
+                    this.player1.lives -= 1;
+                    if (this.player1.heartScales.length > this.player1.lives) {
+                        this.player1.heartScales.pop(); // Remove a heart
+                    }
+                }
+                if (this.ball1.y < this.ball1.radius || this.ball2.y < this.ball2.radius) {
+                    this.player2.lives -= 1;
+                    if (this.player2.heartScales.length > this.player2.lives) {
+                        this.player2.heartScales.pop(); // Remove a heart
+                    }
+                }
+                return this.player1.lives <= 0 || this.player2.lives <= 0;
+            }
+
+            gameOver() {
+                // Clear the canvas first
+                this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+
+                // Draw game elements to show final state
+                this.ball1.draw(this.ctx);
+                this.ball2.draw(this.ctx);
+                this.paddle1.draw(this.ctx);
+                this.paddle2.draw(this.ctx);
+                drawBricks(
+                    this.ctx,
+                    this.canvas,
+                    this.bricks,
+                    this.brickNumPerRow,
+                    this.brickColNum,
+                    this.ball1,
+                    this.ball2,
+                    () => this.resetBricks()
+                );
+
+                // Draw lives
+                drawPlayerLives(this.ctx, this.canvas, this.player1, false);
+                drawPlayerLives(this.ctx, this.canvas, this.player2, true);
+
+                // Cancel any existing animation frame to stop the game loop
+                if (this.animationFrameId) {
+                    cancelAnimationFrame(this.animationFrameId);
+                    this.animationFrameId = null;
+                }
+
+                // Set up countdown
+                if (this.stage === 5) {
+                    // First time entering game over, show "Game Over" text
+                    let gameOverFontSize = this.canvas.width * 0.1;
+                    this.ctx.font = gameOverFontSize + "px Arial";
+                    this.ctx.fillStyle = "red";
+                    let gameOverText = "Game Over";
+                    let textWidth = this.ctx.measureText(gameOverText).width;
+                    let textX = (this.canvas.width - textWidth) / 2;
+                    let textY = this.canvas.height / 2;
+                    this.ctx.fillText(gameOverText, textX, textY);
+
+
+                    // Start countdown after 1 second
+                    setTimeout(() => {
+                        this.stage = 4;
+                        this.gameOver();
+                    }, 1000);
+                }
+                else if (this.stage > 0) {
+                    // Show countdown
+                    let gameOverFontSize = this.canvas.width * 0.1;
+                    this.ctx.font = gameOverFontSize + "px Arial";
+                    this.ctx.fillStyle = "red";
+                    let textWidth = this.ctx.measureText(this.stage.toString()).width;
+                    let textX = (this.canvas.width - textWidth) / 2;
+                    let textY = this.canvas.height / 2;
+                    this.ctx.fillText(this.stage.toString(), textX, textY);
+
+                    // Continue countdown
+                    this.stage -= 1;
+                    setTimeout(() => {
+                        this.gameOver();
+                    }, 1000);
+                }
+                else {
+                    // Countdown finished, restart the game
+                    this.startGame();
+                }
+            }
+
+            startGame() {
+                // Reset game state
+                this.stage = 5;
+                this.bricks = generateBrickField(this.brickNumPerRow, this.brickColNum);
+                this.brickNumPerRow = 6;
+
+
+                // Reset ball positions and velocities
+                this.ball1.x = this.canvas.width / 2;
+                this.ball1.y = this.canvas.height / 2 + this.canvas.height * 11 / 32;
+                this.ball1.dx = this.canvas.width / 240;
+                this.ball1.dy = this.canvas.height / -320;
+
+                this.ball2.x = this.canvas.width / 2;
+                this.ball2.y = this.canvas.height / 2 - this.canvas.height * 11 / 32;
+                this.ball2.dx = this.canvas.width / 240;
+                this.ball2.dy = this.canvas.height / 320;
+
+                // Reset paddle positions
+                this.paddle1.x = (this.canvas.width - this.paddleWidth) / 2;
+                this.paddle2.x = (this.canvas.width - this.paddleWidth) / 2;
+
+                // Set initial ball speeds
+                this.ball1.setSpeed();
+                this.ball2.setSpeed();
+
+
+                // Reset lastTime
+                this.lastTime = 0;
+
+                // Start the game loop
+                this.animationFrameId = requestAnimationFrame((timestamp) => this.draw(timestamp));
+            }
+        }
+        class Player {
+            constructor(name, lives) {
+                this.lives = lives;
+                this.name = name;
+                this.heartScales = Array(lives).fill(1); // Track individual heart scales
+            }
+
+            updateHeartPulse() {
+                // Update heart scales for a subtle pulse effect
+                this.heartScales = this.heartScales.map((scale, index) => {
+                    if (scale >= 1.2) return 1;
+                    if (scale <= 1) return 1.1;
+                    return scale + 0.002; // Adjust pulse speed
+                });
+            }
+        }
+        /*<%--
+        window.onload = function () {
+            const canvas = document.getElementById("myCanvas");
+
+            // Every other measurement is based off of this.
+            // 70% of viewport width.
+            canvas.width = .6 * window.innerWidth;
+            canvas.height = canvas.width * 2 / 3;
+            const ctx = canvas.getContext("2d");
+            let x = canvas.width / 2;
+            let y = canvas.height * 27 / 32;
+            let speed = canvas.width / 240;
+            let dx = canvas.width / 240;
+            let dy = canvas.height / -160;
+            let ballRadius = canvas.width / 48;
+            let paddleWidth = ballRadius * 5;
+            let paddleHeight = ballRadius;
+            let paddleX = (canvas.width - paddleWidth) / 2;
+            let paddleY = canvas.height * 30 / 32 - ballRadius;
+            let bricks = [];
+            let brickNumPerRow = 6;
+            let brickColNum = 3;
+            let gameOverSeconds = 5;
+            let score = 0;
+            let highScore = 0;
+            let interval = 0;
+
+            function generateBrickField() {
+                for (var i = 0; i < brickNumPerRow * brickColNum; i++) {
+                    bricks[i] = { x: 0, y: 0, hasBeenHit: false }
+                }
+            }
+
+            function drawBricks() {
+                let gapsBetweenBricks = brickNumPerRow + 1;
+                let brickWidth = canvas.width / 48 * (48 - gapsBetweenBricks) / brickNumPerRow;
+                let brickHeight = canvas.width / 48 * 2;
+                let brickX = canvas.width / 48;
+                let brickY = canvas.width / 48;
+                let totalBricks = brickNumPerRow * brickColNum
+                let bricksNotCleared = totalBricks;
+                for (var i = 0; i < totalBricks; i++) {
+
+                    bricks[i].brickX = brickX;
+                    bricks[i].brickY = brickY;
+                    if (i % brickNumPerRow == 0 && i != 0) {
+                        brickY += brickHeight + canvas.width / 48;
+                        brickX = canvas.width / 48;
+                    }
+                    if (!bricks[i].hasBeenHit) {
+                        ctx.beginPath();
+                        ctx.rect(brickX, brickY, brickWidth, brickHeight);
+                        ctx.fillStyle = "#2F2219";
+                        ctx.fill();
+                        ctx.closePath();
+                        [x, y, dx, dy] = whetherBallDirectionShouldSwitch(x, y, dx, dy, brickX, brickX + brickWidth, brickY, brickY + brickHeight, i);
+                    } else {
+                        bricksNotCleared -= 1;
+                        if (bricksNotCleared == 0) {
+                            brickNumPerRow += 1;
+                            generateBrickField();
+                        }
+                    }
+                    brickX += brickWidth + canvas.width / 48;
+                }
+            }
+
+            function whetherBallDirectionShouldSwitch(x, y, dx, dy, objLeftX, objRightX, objTopY, objBottomY, brickId = -1) {
+                // Expand the object's boundaries by the ball's radius
+                const leftBound = objLeftX - ballRadius;
+                const rightBound = objRightX + ballRadius;
+                const topBound = objTopY - ballRadius;
+                const bottomBound = objBottomY + ballRadius;
+
+                // Check if the ball's center is within the expanded boundaries
+                if (x > leftBound && x < rightBound && y > topBound && y < bottomBound) {
+
+                    // Calculate the intersection depths
+                    const overlapLeft = x - leftBound;
+                    const overlapRight = rightBound - x;
+                    const overlapTop = y - topBound;
+                    const overlapBottom = bottomBound - y;
+
+                    // Using overlap was the best way I could think of,
+                    // because I couldn't figure out how to get solid edges.
+                    // This finds the edge nearest to an edge of the ball.
+                    // Or rather, it finds the nearest edge's distance from
+                    // the edge of the ball.
+                    const minOverlap = Math.min(overlapLeft, overlapRight, overlapTop, overlapBottom);
+
+                    // Figures out which side was hit and adjusts position and velocity 
+                    // Position needs to be adjusted because there used to be a weird
+                    // glitch where the ball would get stuck inside the paddle
+                    if (minOverlap === overlapLeft) {
+                        x = leftBound;
+                        dx = -Math.abs(dx);
+                    } else if (minOverlap === overlapRight) {
+                        x = rightBound;
+                        dx = Math.abs(dx);
+                    } else if (minOverlap === overlapTop) {
+                        y = topBound;
+                        dy = -Math.abs(dy);
+                    } else if (minOverlap === overlapBottom) {
+                        y = bottomBound;
+                        dy = Math.abs(dy);
+                    }
+
+                    // Makes the bounces a little bit random
+                    dx += (Math.random() - .5) * speed / 8;
+                    dy += (Math.random() - .5) * speed / 8;
+
+                    /* 
+                    I'm in love with these formulas! They keep the speeds within 
+                    reasonable bounds, and ensure that the ball doesn't bounce so 
+                    horizontally that it takes forever to fall. 
+                    
+                    dx = Math.sign(dx) * Math.abs(dx / dy * (speed));
+                    dy = Math.sign(dy) * Math.abs(dy / dx * (speed));
+
+                    if (Math.abs(dx) < speed / 1.3) {
+                        dx = Math.sign(dx) * speed;
+                        dy = Math.sign(dy) * speed;
+                    }
+                    if (Math.abs(dy) < speed / 1.3) {
+                        dx = Math.sign(dx) * speed;
+                        dy = Math.sign(dy) * speed;
+                    }
+
+                    if (brickId != -1) {
+                        bricks[brickId].hasBeenHit = true;
+                        score += 1;
+                        highScore = highScore < score ? score : highScore
+                    }
+                }
+
+                return [x, y, dx, dy];
+            }
+
+
+
+            function draw() {
+                // Resets the canvas before drawing everything
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+                drawBall();
+                canvas.onmousemove = (event) => {
+                    // Ties the paddle to the mouse
+                    paddleX = event.clientX - canvas.getBoundingClientRect().left - paddleWidth / 2;
+
+                    // Ensure paddle stays within canvas
+                    paddleX = Math.max(0, Math.min(canvas.width - paddleWidth, paddleX));
+                }
+
+                drawPaddle();
+                drawBricks();
+
+                // Wall collision check
+                if (x + dx > canvas.width - ballRadius || x + dx < ballRadius) {
+                    dx = -dx;
+                }
+                if (y + dy < ballRadius) {
+                    dy = -dy;
+                }
+
+                // Paddle collision check
+                [x, y, dx, dy] = whetherBallDirectionShouldSwitch(x, y, dx, dy, paddleX, paddleX + paddleWidth, paddleY, paddleY + paddleHeight);
+
+                // Move ball
+                x += dx;
+                y += dy;
+
+                if (isGameOver()) {
+                    gameOver();
+                }
+            }
+
+            function gameOver() {
+                clearInterval(interval);
+                let gameOverFontSize = canvas.width * .1;
+                ctx.font = gameOverFontSize + "px Arial";
+                ctx.fillStyle = "red";
+                let gameOverText = "Game Over";
+                let textWidth = ctx.measureText(gameOverText).width;
+                let textX = (canvas.width - textWidth) / 2;
+                let textY = canvas.height / 2;
+                ctx.fillText(gameOverText, textX, textY);
+
+                score = 0;
+
+                sleep(gameOverSeconds * 1000).then(() => { startGame() });
+            }
+
+            // Thanks to https://www.sitepoint.com/delay-sleep-pause-wait/
+            function sleep(ms) {
+                return new Promise(resolve => setTimeout(resolve, ms));
+            }
+
+            function isGameOver() {
+                return y > canvas.height - ballRadius;
+            }
+
+            function drawBall() {
+                ctx.beginPath();
+                ctx.arc(x, y, ballRadius, 0, Math.PI * 2);
+                ctx.fillStyle = "#2F2219";
+                ctx.fill();
+                ctx.closePath();
+            }
+
+            function drawPaddle() {
+                ctx.beginPath();
+                ctx.rect(paddleX, paddleY, paddleWidth, paddleHeight)
+                ctx.fillStyle = "#2F2219";
+                ctx.fill();
+                ctx.closePath();
+            }
+
+            function startGame() {
+                interval = setInterval(draw, 10);
+                generateBrickField();
+                brickNumPerRow = 6;
+                x = canvas.width / 2;
+                y = canvas.height * 27 / 32;
+                dx = canvas.width / 240;
+                dy = canvas.height / -160;
+            }
+
+            startGame();
+            // document.getElementById("startButton").addEventListener("click", function () {
+            //     startGame();
+            //     this.disabled = true;
+            // });
+        }; --%> */
+    </script>
+
+        <canvas id="myCanvas" width="480" height="320"></canvas>
